@@ -1,0 +1,21 @@
+{
+  "name": "configserver",
+  "version": "1.0.0",
+  "description": "REST service for storing and retrieving json config files on disk",
+  "main": "configserver.js",
+  "scripts": {
+    "start": "nodemon configserver.js"
+  },
+  "author": "Anne Blankert",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "express-fileupload": "^1.1.5",
+    "morgan": "^1.9.1",
+    "uuid": "^3.3.2"
+  },
+  "devDependencies": {
+    "nodemon": "^1.19.1"
+  }
+}
