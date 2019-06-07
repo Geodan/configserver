@@ -1,0 +1,5 @@
+{
+    "trustproxy": "127.0.0.1",
+    "pathprefix": "/config",
+    "template": "https://myservice?configurl={url}"
+}

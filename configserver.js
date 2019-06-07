@@ -6,9 +6,11 @@ const fileUpload = require('express-fileupload');
 const cors = require('cors');
 const fs = require('fs');
 const uuidv4 = require('uuid/v4');
+const config = require('./config.json');
 
 const app = express();
 
+app.set('trust proxy', config.trustproxy);
 app.use(logger('dev'));
 app.use(cors());
 app.use(fileUpload());
@@ -27,8 +29,8 @@ app.post('/', (req, res, next) => {
     sampleFile.mv(`${__dirname}/public/files/${filename}`, function(err) {
     if (err)
         return res.status(500).send(err);
-
-    res.json({"file": filename, "url": `${req.protocol}://${req.host}${`${req.originalUrl}/files/${filename}`.replace(/\/\//g, '/')}`});
+    const url = `${req.protocol}://${req.host}${`${config.pathprefix}${req.originalUrl}/files/${filename}`.replace(/\/\//g, '/')}`;
+    res.json({"file": filename, "url": url, "use": config.template.replace('{url}', url)});
     const a = req;
     });
 });
