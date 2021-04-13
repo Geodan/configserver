@@ -139,7 +139,7 @@ async function uploadFile(key) {
     formData.append('key', key);
     formData.append('filename', filename);
     try {
-        let response = await fetch('/', {
+        let response = await fetch('.', {
             method: 'POST',
             body: formData
         });
