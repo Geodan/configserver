@@ -1,11 +1,11 @@
 const port = 3002;
 
 const express = require('express');
+const path = require('path');
 const logger = require('morgan');
 const fileUpload = require('express-fileupload');
 const cors = require('cors');
 const fs = require('fs');
-const uuidv4 = require('uuid/v4');
 const md5 = require('md5')
 const sanitize = require("sanitize-filename");
 const config = require('./config.json');
@@ -23,15 +23,83 @@ function validateConfig(json) {
     return (json.map && json.datacatalog && json.tools && json.keys)
 }
 
+function getHash(key) {
+    return md5(key.trim()).slice(0,19);
+}
+
+function getConfigDir(key) {
+    return `${__dirname}/public/files/${getHash(key)}`;
+}
+
+app.post('/deletefile', (req, res) => {
+    let key = req.body.key;
+    let filename = req.body.filename;
+    if (!key || !filename) {
+        res.json({error:"missing required parameter"});
+        return;
+    }
+    let dirname = getConfigDir(key);
+    let fullPath = path.join(dirname, filename);
+    if (!fs.existsSync(fullPath)) {
+        return res.json({error: 'File does not exist'})
+    }
+    try {
+        fs.unlinkSync(fullPath);
+        return res.json({result: 'ok'});
+    } catch(err) {
+        return res.json({error: err.message});
+    }
+})
+
+app.post('/list', (req, res) => {
+    let key = req.body.key;
+    if (!key) {
+        res.json({error:"missing required parameter"});
+        return;
+    }
+    let dirname = getConfigDir(key);
+    if (!fs.existsSync(dirname)) {
+        return res.json([])
+    }
+    let hash = getHash(key);
+    let files = fs.readdirSync(dirname);
+    let host = req.get('x-forwarded-host');
+    if (!host) {
+        host = req.get('host');
+    }
+    files = files.map((file)=>{
+        const url = `${req.protocol}://${host}${`${config.pathprefix}/files/${hash}/${file}`.replace(/\/\//g, '/')}`;
+        let stat = fs.statSync(path.join(dirname, file));
+        let result = {
+          name: file,
+          url: url,
+          use: config.template.replace('{url}', url),
+          size: stat.size,
+          file: !!(stat.mode & 0100000),
+          dir: !!(stat.mode &  0040000),
+          ctime: stat.ctime,
+          mtime: stat.mtime,
+          atime: stat.atime,
+          permissions: `${(stat.mode & 0040000)?'d':(stat.mode & 0100000)?'f':'-'}${stat.mode & 400?'r':'-'}${stat.mode & 200?'w':'-'}${stat.mode & 100?'x':'-'}${stat.mode & 40?'r':'-'}${stat.mode & 20?'w':'-'}${stat.mode&10?'x':'-'}${stat.mode&4?'r':'-'}${stat.mode&2?'w':'-'}${stat.mode&1?'x':'-'}`,
+          nlink: stat.nlink,
+          uid: stat.uid,
+          gid: stat.gid
+        }
+        return result;
+      });
+    res.json(files);
+})
+
 app.post('/', async (req, res, next) => {
+    if (!req.files) {
+        return res.status(400).send('No files were uploaded.');  
+    }
     if (Object.keys(req.files).length == 0) {
       return res.status(400).send('No files were uploaded.');
     }
     let key = req.body.key;
-    let hash = md5(key).slice(0,12)
-    //console.log(`key: ${key}, hash: ${hash}`)
-
-    // The name of the input field (i.e. "sampleFile") is used to retrieve the uploaded file
+    let hash = md5(key.trim()).slice(0,19)
+    
     let configFile = req.files.configfile;
     if (configFile.truncated) {
         return res.status(413).json({error: 'max file size exceeded'});
@@ -44,8 +112,8 @@ app.post('/', async (req, res, next) => {
     } catch (error) {
         return res.status(422).json({"error": `Error parsing json: ${error}`})
     }
-    let hashedDirname =`${__dirname}/public/files/${hash}`;
-    fs.mkdirSync(hashedDirname, {recursive: true});
+    let configDir = getConfigDir(key);
+    fs.mkdirSync(configDir, {recursive: true});
 
 
     // Use the mv() method to place the file somewhere on your server
@@ -57,7 +125,7 @@ app.post('/', async (req, res, next) => {
         //filename = `${uuidv4()}.json`;
         filename = sanitize(req.files.configfile.name)
     }
-    configFile.mv(`${hashedDirname}/${filename}`, function(err) {
+    configFile.mv(`${configDir}/${filename}`, function(err) {
     if (err) {
         return res.status(500).json({error: err});
     }
