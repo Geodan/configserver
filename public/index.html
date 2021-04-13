@@ -12,6 +12,8 @@
       action='./' 
       method='post' 
       encType="multipart/form-data">
+        <input type="text" name="key" value="" placeholder="your unique id"><br>
+        <input type="text" name="filename" value="" placeholder="(optional) storage filename"><br>
         <input type="file" name="configfile" accept=".json,.geojson" />
         <input type='submit' value='Upload!' />
     </form>
