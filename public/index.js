@@ -18,6 +18,9 @@ function byteString(byteCount, precision) {
 }
 
 function storeKey(key) {
+    if (!key || key === '') {
+        return;
+    }
     let oldKeys = retrieveKeys();
     oldKeys = oldKeys.filter(oldKey=>oldKey !== key);
     while (oldKeys.length > 10) {
@@ -69,11 +72,11 @@ async function deleteFile(key, filename) {
 }
 
 async function listFiles(key) {
+    let listoutput = document.querySelector('#listoutput');
     if (!key) {
-        window.alert('please specify your unique id');
+        listoutput.innerHTML = "";
         return;
     }
-    let listoutput = document.querySelector('#listoutput');
     try{
         let response = await fetch('list', {
             method: 'POST',
@@ -112,13 +115,12 @@ function updateKeyHistory() {
                 </select>`
         }
         oldKeysDiv.innerHTML += `<input type="button" name="delkeys" value="clear keys">`;
-        listFiles(activeKey);
     } else {
         document.querySelector('input[name="key"]').value = '';
     }
 }
 
-function keySelected() {
+function keyChanged() {
     let newKey = document.querySelector('select[name="oldkeys"]').value;
     document.querySelector('input[name="key"]').value = newKey;
     listFiles(newKey);
@@ -126,9 +128,12 @@ function keySelected() {
 
 async function uploadFile(key) {
     let listoutput = document.querySelector('#listoutput');
-    listoutput.innerHTML = 'uploading...'
     const files = document.querySelector('input[name="configfile"]').files;
     const filename = document.querySelector('input[name="filename"]').value;
+    if (!files.length || !key || key === '') {
+        return;
+    }
+    listoutput.innerHTML = 'uploading...'
     const formData = new FormData();
     formData.append('configfile', files[0]);
     formData.append('key', key);
@@ -155,31 +160,40 @@ window.addEventListener('load', ()=>{
         location.replace(`https:${location.href.substring(location.protocol.length)}`);
     }
     updateKeyHistory();
+    listFiles(document.querySelector('input[name="key"]').value);
     let listButton = document.querySelector("#listbutton");
     listButton.addEventListener('click', (e)=>{
         let key = document.querySelector('input[name="key"]').value;
-        storeKey(key);
+        if (!key || key === '') {
+            window.alert('please specify your unique id');
+        } else {
+            storeKey(key);
+            updateKeyHistory()
+        }
         listFiles(key);
     })
     form = document.querySelector("form");
     form.addEventListener('submit', (event)=>{
         let key = document.querySelector('input[name="key"]').value;
         if (!key) {
-            alert(window.alert('please specify your unique id'));
+            window.alert('please specify your unique id');
             event.preventDefault();
+            return;
         }
         storeKey(key);
+        updateKeyHistory();
         uploadFile(key);
         event.preventDefault();
     });
     document.addEventListener('click', e=>{
         if (e.target && e.target.tagName === 'INPUT' && e.target.name === 'delkeys') {
             deleteAllKeys();
+            listFiles();
         }
     });
     document.addEventListener('change', e=>{
         if (e.target && e.target.tagName === 'SELECT' && e.target.name === 'oldkeys' ) {
-            keySelected();
+            keyChanged();
         }
     })
 })
