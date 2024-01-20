@@ -1,5 +1,5 @@
 {
     "trustproxy": "127.0.0.1",
-    "pathprefix": "/config",
-    "template": "https://myservice?configurl={url}"
+    "pathprefix": "/",
+    "template": "http://kaart.edugis.nl/v2#configurl={url}"
 }
