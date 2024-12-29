@@ -1,4 +1,4 @@
-const port = 3002;
+const port = process.env.PORT || 3002;
 
 const express = require('express');
 const path = require('path');
@@ -67,8 +67,16 @@ app.post('/list', (req, res) => {
     if (!host) {
         host = req.get('host');
     }
+    let protocol = req.get('x-forwarded-proto');
+    if (!protocol) {
+        protocol = req.protocol;
+    }
+    let prefix = req.get('x-forwarded-prefix');
+    if (!prefix) {
+        prefix = config.pathprefix;
+    }
     files = files.map((file)=>{
-        const url = `${req.protocol}://${host}${`${config.pathprefix}/files/${hash}/${file}`.replace(/\/\//g, '/')}`;
+        const url = `${protocol}://${host}${`${prefix}/files/${hash}/${file}`.replace(/\/\//g, '/')}`;
         let stat = fs.statSync(path.join(dirname, file));
         let result = {
           name: file,
